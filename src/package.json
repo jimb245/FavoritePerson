@@ -1,0 +1,19 @@
+{
+  "name": "skill-favorite-person",
+  "version": "1.0.0",
+  "description": "Have Alexa choose a daily favorite person",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Alexa",
+    "skill",
+    "game"
+  ],
+  "author": "Jim Brandt",
+  "license": "MIT",
+  "dependencies": {
+    "alexa-sdk": "^1.0.15"
+  }
+}

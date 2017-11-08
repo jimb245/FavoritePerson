@@ -1,0 +1,14 @@
+{"intents": [
+    {"intent": "GetFavoriteIntent"}, 
+    {"intent": "AddFavoriteIntent", 
+        "slots": [
+            {"name": "favname", "type": "ListOfAny"}]},
+    {"intent": "AddFavoriteAndNoteIntent", 
+        "slots": [
+            {"name": "favname", "type": "AMAZON:US_FIRST_NAME"},
+            {"name": "favnote", "type": "ListOfAny"}
+            ]},
+    {"intent": "AMAZON.HelpIntent"}
+  ]
+}
+

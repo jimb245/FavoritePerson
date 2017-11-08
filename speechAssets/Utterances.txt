@@ -1,0 +1,71 @@
+GetFavoriteIntent who is your favorite person
+GetFavoriteIntent who is your favorite person today
+GetFavoriteIntent who is your favorite person now
+GetFavoriteIntent who your favorite person is
+GetFavoriteIntent who your favorite person is today
+GetFavoriteIntent who your favorite person is now
+GetFavoriteIntent who's your favorite person
+GetFavoriteIntent who's your favorite person today
+GetFavoriteIntent who's your favorite person now
+GetFavoriteIntent what is your favorite person
+GetFavoriteIntent what is your favorite person today
+GetFavoriteIntent what is your favorite person now
+GetFavoriteIntent what's your favorite person
+GetFavoriteIntent what's your favorite person today
+GetFavoriteIntent what's your favorite person now
+GetFavoriteIntent your favorite person
+GetFavoriteIntent your favorite person today
+GetFavoriteIntent your favorite person now
+GetFavoriteIntent am i your favorite person
+GetFavoriteIntent am i your favorite person today
+GetFavoriteIntent am i your favorite person now
+GetFavoriteIntent who is yours
+GetFavoriteIntent who is yours today
+GetFavoriteIntent who is yours now
+GetFavoriteIntent who yours is
+GetFavoriteIntent who yours is today
+GetFavoriteIntent who yours is now
+GetFavoriteIntent who's yours
+GetFavoriteIntent who's yours today
+GetFavoriteIntent who's yours now
+GetFavoriteIntent favorite person
+GetFavoriteIntent favorite person today
+GetFavoriteIntent favorite person now
+AddFavoriteIntent add {favname}
+AddFavoriteIntent add {favname} as favorite
+AddFavoriteIntent add {favname} as your favorite
+AddFavoriteIntent add {favname} as a favorite
+AddFavoriteIntent add {favname} as favorite person
+AddFavoriteIntent add {favname} as your favorite person
+AddFavoriteIntent add {favname} as a favorite person
+AddFavoriteIntent add favorite {favname}
+AddFavoriteIntent add favorite person {favname}
+AddFavoriteIntent add new favorite {favname}
+AddFavoriteIntent add new favorite person {favname}
+AddFavoriteIntent add {favname} to favorites
+AddFavoriteIntent make {favname} your favorite
+AddFavoriteIntent make {favname} a favorite
+AddFavoriteIntent make {favname} one of your favorites
+AddFavoriteIntent change your favorite to {favname}
+AddFavoriteIntent change favorite to {favname}
+AddFavoriteIntent set your favorite to {favname}
+AddFavoriteIntent set favorite to {favname}
+AddFavoriteAndNoteIntent add {favname} because {favnote}
+AddFavoriteAndNoteIntent add {favname} as favorite because {favnote}
+AddFavoriteAndNoteIntent add {favname} as your favorite because {favnote}
+AddFavoriteAndNoteIntent add {favname} as a favorite because {favnote}
+AddFavoriteAndNoteIntent add {favname} as favorite person because {favnote}
+AddFavoriteAndNoteIntent add {favname} as your favorite person because {favnote}
+AddFavoriteAndNoteIntent add {favname} as a favorite person because {favnote}
+AddFavoriteAndNoteIntent add favorite {favname} because {favnote}
+AddFavoriteAndNoteIntent add favorite person {favname} because {favnote}
+AddFavoriteAndNoteIntent add new favorite {favname} because {favnote}
+AddFavoriteAndNoteIntent add new favorite person {favname} because {favnote}
+AddFavoriteAndNoteIntent add {favname} to favorites because {favnote}
+AddFavoriteAndNoteIntent make {favname} your favorite because {favnote}
+AddFavoriteAndNoteIntent make {favname} a favorite because {favnote}
+AddFavoriteAndNoteIntent make {favname} one of your favorites because {favnote}
+AddFavoriteAndNoteIntent change your favorite to {favname} because {favnote}
+AddFavoriteAndNoteIntent change favorite to {favname} because {favnote}
+AddFavoriteAndNoteIntent set your favorite to {favname} because {favnote}
+AddFavoriteAndNoteIntent set favorite to {favname} because {favnote}
