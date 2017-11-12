@@ -1,4 +1,4 @@
-'use strict';
+'usestrict';
 
 var Alexa = require('alexa-sdk');
 var appId = 'amzn1.ask.skill.298e180a-4976-4a90-90d1-6081abaaf089';
@@ -13,31 +13,34 @@ exports.handler = function(event, context, callback) {
 };
 
 var globalFavorites = [
-    ['me yay', 'none'],
-    ['oh sorry, I\'m not playing favorites today', 'none'],
-    ['Princess Leia', 'she is brave'],
-    ['Harry Potter', 'he is clever'],
-    ['Bugs Bunny', 'he is cool'],
-    ['The Grinch', 'he is so crabby'],
-    ['Santa Claus', 'he is Santa'],
-    ['The Little Prince', ''],
-    ['Mary Poppins', ''],
-    ['Frosty The Snowman', 'he is never cold'],
-    ['Woody', ''],
-    ['Simba', ''],
-    ['Dorothy', 'she is off to see the wizard'],
-    ['Little Bo Peep', 'she is fond of sheep'],
-    ['Willy wonka', 'he is a chocolate expert'],
-    ['Superman', ''],
-    ['Neo', 'he is the one']
+    ['me yay', 'empty', 'empty'],
+    ['sorry, I\'m not playing favorites today', 'empty', 'empty'],
+    ['Princess Leia', 'she', 'brave'],
+    ['Harry Potter', 'he', 'clever'],
+    ['Bugs Bunny', 'he', 'cool'],
+    ['The Grinch', 'he', 'crabby'],
+    ['Santa Claus', 'he', 'Santa'],
+    ['Mary Poppins', 'she', 'the best nanny'],
+    ['Frosty The Snowman', 'he', 'never cold'],
+    ['Dorothy', 'she', 'off to see the wizard'],
+    ['Little Bo Peep', 'she', 'kind to sheep'],
+    ['Willy wonka', 'he', 'a chocolate expert'],
+    ['Superman', 'he', 'strong'],
+    ['Neo', 'he', 'the one'],
+    ['Kermit', 'he', 'cheerful'],
+    ['Horton', 'he', 'a good listener'],
+    ['Woody', 'empty', 'empty'],
+    ['Simba', 'empty', 'empty'],
+    ['The Little Prince', 'empty', 'empty'],
+    ['Elsa', 'empty', 'empty']
 ];
 
 var randomPick = function(favorites) {
-    let i = Math.floor(favorites.length * Math.random() )
-    return favorites[i]
+    var i = Math.floor(favorites.length * Math.random() );
+    return favorites[i];
 };
 
-var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask Favorite Person who is your favorite today. You can also suggest other people to be my favorite in the future. You can say, Tell Favorite Person to make Sarah your favorite because she is smart'; 
+var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask Favorite Person who is your favorite today. You can also suggest other people to be my favorite in the future. You can say, Tell Favorite Person to make Sarah your favorite because she is nice'; 
 
 var sessionHandlers = {
     "Unhandled": function() {
@@ -45,9 +48,9 @@ var sessionHandlers = {
     },
     'GetFavoriteIntent': function() {
         if(Object.keys(this.attributes).length === 0) {
-            this.attributes['todaysFavorite'] = 'dummy';
-            this.attributes['getFavoriteCount'] = 0;
-            this.attributes['todaysDate'] = 0;
+            this.attributes.todaysFavorite = 'dummy';
+            this.attributes.getFavoriteCount = 0;
+            this.attributes.todaysDate = 0;
             this.emit(':tell', 'Welcome to Favorite Person.' + helpMessage);
         }
         else {
@@ -57,65 +60,67 @@ var sessionHandlers = {
     'AddFavoriteIntent': function() {
         this.emit('addFavoriteHandler');
     },
-    'AddFavoriteAndNoteIntent': function() {
-        this.emit('addFavoriteAndNoteHandler');
+    'AddFavoriteBecauseIntent': function() {
+        this.emit('addFavoriteBecauseHandler');
     },
     'getFavoriteHandler': function() {
-        let fcount = this.attributes['getFavoriteCount'];
-        this.attributes['getFavoriteCount'] += 1;
+        var fcount = this.attributes.getFavoriteCount;
+        this.attributes.getFavoriteCount += 1;
 
-        let date = (new Date()).getDate();
-        if (this.attributes['todaysDate'] == date) {
-            this.emit(':tell', this.attributes['todaysFavorite']);
+        var date = (new Date()).getDate();
+        if (this.attributes.todaysDate == date) {
+            this.emit(':tell', this.attributes.todaysFavorite);
         }
         else {
-            this.attributes['todaysDate'] = date;
-            let pick;
-            if (fcount == 0) {
+            this.attributes.todaysDate = date;
+            var pick;
+            if (fcount === 0) {
                 pick = globalFavorites[0];
             }
-            else if ('userAddedFavorites' in this.attributes && fcount % 2 == 1) { 
-                pick = randomPick(this.attributes['userAddedFavorites']);
+            else if (this.attributes.hasOwnProperty('userAddedFavorites') && this.attributes.userAddedFavorites.length > 0 && fcount % 2 == 1) { 
+                pick = randomPick(this.attributes.userAddedFavorites);
             }
             else {
                 pick = randomPick(globalFavorites);
             }
-            let favorite = 'My favorite person today is ' + pick[0];
+            var favorite = 'My favorite person today is ' + pick[0];
 
             if (pick[1] != 'empty') {
-                favorite += ' because ' + pick[1];
+                favorite += ' because ' + pick[1] + ' is ' + pick[2];
             }
-            this.attributes['todaysFavorite'] = favorite;
+            this.attributes.todaysFavorite = favorite;
             this.emit(':tell', favorite);
         }
     },
     'addFavoriteHandler': function() {
-        let fav = this.event.request.intent.slots.favname;
-        if (fav && 'value' in fav) {
+        var favname = this.event.request.intent.slots.favname;
+        if (favname && 'value' in favname) {
         
-            if ( !('userAddedFavorites' in this.attributes) ) {
-                this.attributes['userAddedFavorites'] = []
+            if ( !( this.attributes.hasOwnProperty('userAddedFavorites') )) {
+                this.attributes.userAddedFavorites = [];
             }
-            let value = fav['value'];
-            this.attributes['userAddedFavorites'].push([value, 'empty']);
-            let response = 'OK, I will think about making ' + value + ' my favorite';
+            var name = favname.value;
+            this.attributes.userAddedFavorites.push([name, 'empty', 'empty']);
+            var response = 'OK, I will think about making ' + name + ' my favorite';
             this.emit(':tell', response);
         }
         else {
             this.emit(':tell', 'Sorry, I didn\'t get that.');
         }
     },
-    'addFavoriteAndNoteHandler': function() {
-        let fav = this.event.request.intent.slots.favname;
-        let note = this.event.request.intent.slots.favnote;
-        if (fav && note && 'value' in fav && 'value' in note) {
-            if ( !('userAddedFavorites' in this.attributes) ) {
-                this.attributes['userAddedFavorites'] = []
+    'addFavoriteBecauseHandler': function() {
+        var favname = this.event.request.intent.slots.favname;
+        var favnoun = this.event.request.intent.slots.favnoun;
+        var favadj = this.event.request.intent.slots.favadj;
+        if (favname && favnoun && favadj && 'value' in favname && 'value' in favnoun && 'value' in favadj) {
+            if ( !(this.attributes.hasOwnProperty('userAddedFavorites') )) {
+                this.attributes.userAddedFavorites = [];
             }
-            let fvalue = fav['value'];
-            let nvalue = note['value'];
-            this.attributes['userAddedFavorites'].push([fvalue, nvalue]);
-            let response = 'OK, I will think about making ' + fvalue + ' my favorite because ' + nvalue;
+            var name = favname.value;
+            var noun = favnoun.value;
+            var adjective = favadj.value;
+            this.attributes.userAddedFavorites.push([name, noun, adjective]);
+            var response = 'OK, I will think about making ' + name + ' my favorite because ' + noun + ' is ' + adjective;
             this.emit(':tell', response);
         }
         else {

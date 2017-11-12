@@ -14,11 +14,19 @@
     "type": "IntentRequest",
     "requestId": "EdwRequestId.33c9ba23-d443-4284-ad21-0bd05fe1a599",
     "intent": {
-        "name": "AddFavoriteIntent",
+        "name": "AddFavoriteBecauseIntent",
         "slots": {
             "favname": {
                 "name": "favname",
-                "value": "Maxwell"
+                "value": "Suzi"
+            },
+            "favnoun": {
+                "name": "favnoun",
+                "value": "she"
+            },
+            "favadj": {
+                "name": "favadj",
+                "value": "smart"
             }
         }
     },

@@ -50,22 +50,22 @@ AddFavoriteIntent change your favorite to {favname}
 AddFavoriteIntent change favorite to {favname}
 AddFavoriteIntent set your favorite to {favname}
 AddFavoriteIntent set favorite to {favname}
-AddFavoriteAndNoteIntent add {favname} because {favnote}
-AddFavoriteAndNoteIntent add {favname} as favorite because {favnote}
-AddFavoriteAndNoteIntent add {favname} as your favorite because {favnote}
-AddFavoriteAndNoteIntent add {favname} as a favorite because {favnote}
-AddFavoriteAndNoteIntent add {favname} as favorite person because {favnote}
-AddFavoriteAndNoteIntent add {favname} as your favorite person because {favnote}
-AddFavoriteAndNoteIntent add {favname} as a favorite person because {favnote}
-AddFavoriteAndNoteIntent add favorite {favname} because {favnote}
-AddFavoriteAndNoteIntent add favorite person {favname} because {favnote}
-AddFavoriteAndNoteIntent add new favorite {favname} because {favnote}
-AddFavoriteAndNoteIntent add new favorite person {favname} because {favnote}
-AddFavoriteAndNoteIntent add {favname} to favorites because {favnote}
-AddFavoriteAndNoteIntent make {favname} your favorite because {favnote}
-AddFavoriteAndNoteIntent make {favname} a favorite because {favnote}
-AddFavoriteAndNoteIntent make {favname} one of your favorites because {favnote}
-AddFavoriteAndNoteIntent change your favorite to {favname} because {favnote}
-AddFavoriteAndNoteIntent change favorite to {favname} because {favnote}
-AddFavoriteAndNoteIntent set your favorite to {favname} because {favnote}
-AddFavoriteAndNoteIntent set favorite to {favname} because {favnote}
+AddFavoriteBecauseIntent add {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} as favorite because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} as your favorite because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} as a favorite because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} as favorite person because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} as your favorite person because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} as a favorite person because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add favorite {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add favorite person {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add new favorite {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add new favorite person {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent add {favname} to favorites because {favnoun} is {favadj}
+AddFavoriteBecauseIntent make {favname} your favorite because {favnoun} is {favadj}
+AddFavoriteBecauseIntent make {favname} a favorite because {favnoun} is {favadj}
+AddFavoriteBecauseIntent make {favname} one of your favorites because {favnoun} is {favadj}
+AddFavoriteBecauseIntent change your favorite to {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent change favorite to {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent set your favorite to {favname} because {favnoun} is {favadj}
+AddFavoriteBecauseIntent set favorite to {favname} because {favnoun} is {favadj}

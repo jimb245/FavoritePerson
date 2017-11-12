@@ -2,11 +2,12 @@
     {"intent": "GetFavoriteIntent"}, 
     {"intent": "AddFavoriteIntent", 
         "slots": [
-            {"name": "favname", "type": "ListOfAny"}]},
-    {"intent": "AddFavoriteAndNoteIntent", 
+            {"name": "favname", "type": "AMAZON.US_FIRST_NAME"}]},
+    {"intent": "AddFavoriteBecauseIntent",
         "slots": [
-            {"name": "favname", "type": "AMAZON:US_FIRST_NAME"},
-            {"name": "favnote", "type": "ListOfAny"}
+            {"name": "favname", "type": "AMAZON.US_FIRST_NAME"},
+            {"name": "favnoun", "type": "List_Of_Pronouns"},
+            {"name": "favadj", "type": "List_Of_Adjectives"}
             ]},
     {"intent": "AMAZON.HelpIntent"}
   ]

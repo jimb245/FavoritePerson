@@ -69,8 +69,10 @@ sts.assumeRole({
         };
 
         var lambda = require('../src/index.js');
+        //var event = require('./get_favorite_event.json');
         //var event = require('./console_launch_event.json');
-        var event = require('./add_favorite_and_note_event.json');
+        //var event = require('./add_favorite_event.json');
+        var event = require('./add_favorite_because_event.json');
         lambda.handler(event, context());
     }
 });
