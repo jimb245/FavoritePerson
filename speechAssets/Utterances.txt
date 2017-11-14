@@ -31,6 +31,8 @@ GetFavoriteIntent who's yours now
 GetFavoriteIntent favorite person
 GetFavoriteIntent favorite person today
 GetFavoriteIntent favorite person now
+GetFavoriteIntent today
+GetFavoriteIntent now
 AddFavoriteIntent add {favname}
 AddFavoriteIntent add {favname} as favorite
 AddFavoriteIntent add {favname} as your favorite

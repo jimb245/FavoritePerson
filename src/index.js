@@ -13,7 +13,7 @@ exports.handler = function(event, context, callback) {
 };
 
 var globalFavorites = [
-    ['me yay', 'empty', 'empty'],
+    ['me, <say-as interpret-as="interjection">yay,</say-as>', 'empty', 'empty'],
     ['sorry, I\'m not playing favorites today', 'empty', 'empty'],
     ['Princess Leia', 'she', 'brave'],
     ['Harry Potter', 'he', 'clever'],
@@ -40,17 +40,23 @@ var randomPick = function(favorites) {
     return favorites[i];
 };
 
-var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask Favorite Person who is your favorite today. You can also suggest other people to be my favorite in the future. You can say, Tell Favorite Person to make Sarah your favorite because she is nice'; 
+var limitCount = 20;
+
+var limitMessage = 'Sorry, you already have suggested twenty favorites. Any more would give me a headache. You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily';
+
+var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Tell favorite person today. You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart'; 
 
 var sessionHandlers = {
     "Unhandled": function() {
-      this.emit('GetFavoriteIntent');
+      this.emit(':tell', 'Sorry, I didn\'t get that.');
+      //this.emit('GetFavoriteIntent');
     },
     'GetFavoriteIntent': function() {
         if(Object.keys(this.attributes).length === 0) {
             this.attributes.todaysFavorite = 'dummy';
             this.attributes.getFavoriteCount = 0;
             this.attributes.todaysDate = 0;
+            this.attributes.timeStamp = Date.now();
             this.emit(':tell', 'Welcome to Favorite Person.' + helpMessage);
         }
         else {
@@ -73,6 +79,7 @@ var sessionHandlers = {
         }
         else {
             this.attributes.todaysDate = date;
+            this.attributes.timeStamp = Date.now();
             var pick;
             if (fcount === 0) {
                 pick = globalFavorites[0];
@@ -99,10 +106,15 @@ var sessionHandlers = {
             if ( !( this.attributes.hasOwnProperty('userAddedFavorites') )) {
                 this.attributes.userAddedFavorites = [];
             }
-            var name = favname.value;
-            this.attributes.userAddedFavorites.push([name, 'empty', 'empty']);
-            var response = 'OK, I will think about making ' + name + ' my favorite';
-            this.emit(':tell', response);
+            if (this.attributes.userAddedFavorites.length > limitCount) {
+                this.emit(':tell', limitMessage);
+            }
+            else {
+                var name = favname.value;
+                this.attributes.userAddedFavorites.push([name, 'empty', 'empty']);
+                var response = 'OK, I will think about making ' + name + ' my favorite';
+                this.emit(':tell', response);
+            }
         }
         else {
             this.emit(':tell', 'Sorry, I didn\'t get that.');
@@ -116,12 +128,17 @@ var sessionHandlers = {
             if ( !(this.attributes.hasOwnProperty('userAddedFavorites') )) {
                 this.attributes.userAddedFavorites = [];
             }
-            var name = favname.value;
-            var noun = favnoun.value;
-            var adjective = favadj.value;
-            this.attributes.userAddedFavorites.push([name, noun, adjective]);
-            var response = 'OK, I will think about making ' + name + ' my favorite because ' + noun + ' is ' + adjective;
-            this.emit(':tell', response);
+            if (this.attributes.userAddedFavorites.length > limitCount) {
+                this.emit(':tell', limitMessage);
+            }
+            else {
+                var name = favname.value;
+                var noun = favnoun.value;
+                var adjective = favadj.value;
+                this.attributes.userAddedFavorites.push([name, noun, adjective]);
+                var response = 'OK, I will think about making ' + name + ' my favorite because ' + noun + ' is ' + adjective;
+                this.emit(':tell', response);
+            }
         }
         else {
             this.emit(':tell', 'Sorry, I didn\'t get that.');
