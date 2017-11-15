@@ -44,30 +44,49 @@ var limitCount = 20;
 
 var limitMessage = 'Sorry, you already have suggested twenty favorites. Any more would give me a headache. You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily';
 
-var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Tell favorite person today. You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart'; 
+var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask favorite person today. You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. You can also ask me to forget a suggestion. You can say, Ask Favorite Person to forget Emily'; 
+
+var errorMessage = 'Sorry, I didn\'t get that';
 
 var sessionHandlers = {
-    "Unhandled": function() {
-      this.emit(':tell', 'Sorry, I didn\'t get that.');
-      //this.emit('GetFavoriteIntent');
+    'LaunchRequest': function() {
+        if(Object.keys(this.attributes).length === 0) {
+            this.emit('welcomeHandler');
+        }
+        else {
+            this.emit('getFavoriteHandler');
+        }
     },
     'GetFavoriteIntent': function() {
         if(Object.keys(this.attributes).length === 0) {
-            this.attributes.todaysFavorite = 'dummy';
-            this.attributes.getFavoriteCount = 0;
-            this.attributes.todaysDate = 0;
-            this.attributes.timeStamp = Date.now();
-            this.emit(':tell', 'Welcome to Favorite Person.' + helpMessage);
+            this.emit('welcomeHandler');
         }
         else {
             this.emit('getFavoriteHandler');
         }
     },
     'AddFavoriteIntent': function() {
-        this.emit('addFavoriteHandler');
+        if(Object.keys(this.attributes).length === 0) {
+            this.emit('welcomeHandler');
+        }
+        else {
+            this.emit('addFavoriteHandler');
+        }
     },
     'AddFavoriteBecauseIntent': function() {
-        this.emit('addFavoriteBecauseHandler');
+        if(Object.keys(this.attributes).length === 0) {
+            this.emit('welcomeHandler');
+        }
+        else {
+            this.emit('addFavoriteBecauseHandler');
+        }
+    },
+    'welcomeHandler': function() {
+        this.attributes.todaysFavorite = 'dummy';
+        this.attributes.getFavoriteCount = 0;
+        this.attributes.todaysDate = 0;
+        this.attributes.timeStamp = Date.now();
+        this.emit(':tell', 'Welcome to Favorite Person.' + helpMessage);
     },
     'getFavoriteHandler': function() {
         var fcount = this.attributes.getFavoriteCount;
@@ -117,7 +136,7 @@ var sessionHandlers = {
             }
         }
         else {
-            this.emit(':tell', 'Sorry, I didn\'t get that.');
+            this.emit(':tell', errorMessage);
         }
     },
     'addFavoriteBecauseHandler': function() {
@@ -141,11 +160,14 @@ var sessionHandlers = {
             }
         }
         else {
-            this.emit(':tell', 'Sorry, I didn\'t get that.');
+            this.emit(':tell', errorMessage);
         }
     },
     "AMAZON.HelpIntent": function() {
         this.emit(':tell', helpMessage);
+    },
+    'Unhandled': function() {
+      this.emit(':tell', errorMessage);
     }
 };
 
