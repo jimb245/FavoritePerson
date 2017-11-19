@@ -31,31 +31,37 @@ var globalFavorites = [
     ['Kermit', 'he', 'cheerful'],
     ['Horton', 'he', 'a good listener'],
     ['Woody', 'he', 'a leader'],
-    ['The Little Prince', 'he', 'from an asteroid'],
+    ['The Little Prince', 'he', 'at home on an asteroid'],
     ['Simba', 'he', 'a king'],
     ['Elsa', 'she', 'a good sister']
 ];
 
 var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask favorite person today. You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. You can also ask me to forget an earlier suggestion. You can say, Ask Favorite Person to forget Emily'; 
 
-var limitCount = 20;
+var limitCount = 10;
 
-var limitMessage = 'Sorry, you already have suggested twenty favorites. Any more would give me a headache. You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily';
+var limitMessage = 'Sorry, you already have suggested ten favorites. Any more would give me a headache. You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. Here are your current suggestions,';
 
 var errorMessage = 'Sorry, I didn\'t get that';
+
+var TTL = 3600; // time to live delta in seconds
 
 var randomPick = function(favorites) {
     var i = Math.floor(favorites.length * Math.random() );
     return favorites[i];
 };
 
-var isNewName = function(name, userFavorites) {
-    for (var i in range(userFavorites.length)) {
+var nameExists = function(name, userFavorites) {
+    for (var i = 0; i < userFavorites.length; i++) {
         if (userFavorites[i][0] == name) {
-            return false;
+            return i;
         }
     }
-    return true;
+    return null;
+};
+
+var newTTL = function() {
+    return Math.floor(Date.now()/1000) + TTL;
 };
 
 var addMessage = function(favorite) {
@@ -116,10 +122,11 @@ var sessionHandlers = {
         this.attributes.todaysFavorite = 'dummy';
         this.attributes.getFavoriteCount = 0;
         this.attributes.todaysDate = 0;
-        this.attributes.timeStamp = Date.now();
+        this.attributes.TTL = newTTL();
         this.emit(':tell', 'Welcome to Favorite Person.' + helpMessage);
     },
     'getFavoriteHandler': function() {
+        this.attributes.TTL = newTTL();
         var fcount = this.attributes.getFavoriteCount;
         this.attributes.getFavoriteCount += 1;
 
@@ -150,19 +157,24 @@ var sessionHandlers = {
         }
     },
     'addFavoriteHandler': function() {
+        this.attributes.TTL = newTTL();
         var favname = this.event.request.intent.slots.favname;
         if (favname && 'value' in favname) {
         
             if ( !( this.attributes.hasOwnProperty('userAddedFavorites') )) {
                 this.attributes.userAddedFavorites = [];
             }
-            if (this.attributes.userAddedFavorites.length == limitCount) {
-                this.emit(':tell', limitMessage);
+            var response;
+            if (this.attributes.userAddedFavorites.length >= limitCount) {
+                response = limitMessage;
+                for (var i = 0; i < this.attributes.userAddedFavorites.length; i++) {
+                    response += this.attributes.userAddedFavorites[i][0] + ', ';
+                }
+                this.emit(':tell', response);
             }
             else {
                 var name = favname.value;
-                var response;
-                if (isNewName(name, this.attributes.userAddedFavorites)) {
+                if (nameExists(name, this.attributes.userAddedFavorites) === null) {
                     this.attributes.userAddedFavorites.push([name, 'empty', 'empty']);
                     response = addMessage([name, 'empty', 'empty']);
                     this.emit(':tell', response);
@@ -178,6 +190,7 @@ var sessionHandlers = {
         }
     },
     'addFavoriteBecauseHandler': function() {
+        this.attributes.TTL = newTTL();
         var favname = this.event.request.intent.slots.favname;
         var favnoun = this.event.request.intent.slots.favnoun;
         var favadj = this.event.request.intent.slots.favadj;
@@ -185,15 +198,19 @@ var sessionHandlers = {
             if ( !(this.attributes.hasOwnProperty('userAddedFavorites') )) {
                 this.attributes.userAddedFavorites = [];
             }
-            if (this.attributes.userAddedFavorites.length == limitCount) {
-                this.emit(':tell', limitMessage);
+            var response;
+            if (this.attributes.userAddedFavorites.length >= limitCount) {
+                response = limitMessage;
+                for (var i = 0; i < this.attributes.userAddedFavorites.length; i++) {
+                    response += this.attributes.userAddedFavorites[i][0] + ', ';
+                }
+                this.emit(':tell', response);
             }
             else {
                 var name = favname.value;
                 var noun = favnoun.value;
                 var adjective = favadj.value;
-                var response;
-                if (isNewName(name, this.attributes.userAddedFavorites)) {
+                if (nameExists(name, this.attributes.userAddedFavorites) === null) {
                     this.attributes.userAddedFavorites.push([name, noun, adjective]);
                     response = addMessage([name, noun, adjective]);
                     this.emit(':tell', response);
@@ -209,14 +226,17 @@ var sessionHandlers = {
         }
     },
     'forgetFavoriteHandler': function() {
+        this.attributes.TTL = newTTL();
         var favname = this.event.request.intent.slots.favname;
         if (favname && 'value' in favname) {
             var name = favname.value;
-            if (isNewName(name, this.attributes.userAddedFavorites)) {
+            var pos = nameExists(name, this.attributes.userAddedFavorites);
+            if (pos === null) {
                 response = 'Hmm, I don\'t seem to remember anything about ' + name;
                 this.emit(':tell', response);
             }
             else {
+                this.attributes.userAddedFavorites.splice(pos, 1);
                 response = 'OK, I will forget about ' + name;
                 this.emit(':tell', response);
             }
@@ -226,9 +246,11 @@ var sessionHandlers = {
         }
     },
     "AMAZON.HelpIntent": function() {
+        this.attributes.TTL = newTTL();
         this.emit(':tell', helpMessage);
     },
     'Unhandled': function() {
+      this.attributes.TTL = newTTL();
       this.emit(':tell', errorMessage);
     }
 };

@@ -9,6 +9,9 @@
             {"name": "favnoun", "type": "List_Of_Pronouns"},
             {"name": "favadj", "type": "List_Of_Adjectives"}
             ]},
+    {"intent": "ForgetFavoriteIntent", 
+        "slots": [
+            {"name": "favname", "type": "AMAZON.US_FIRST_NAME"}]},
     {"intent": "AMAZON.HelpIntent"}
   ]
 }
