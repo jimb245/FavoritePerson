@@ -1,16 +1,30 @@
 'usestrict';
 
+/*
+Lambda function for Favorite Person, a kid's novelty Alexa
+skill. The skill picks a favorite 'person' of the day,
+alternating between a builtin list of film characters
+and a dynamic list entered by users. Within either list
+the selection is random.
+
+The lists contain names and optionally a 'reason' for
+choosing that person as favorite. The reason has to fit the
+sentence pattern:
+
+my favorite today is <name> because <she|he> is <reason>
+
+The lists also include a value for the <she|he> pronoun.
+There is a limit of ten user-generated favorites. The
+user-generated favorites can also be deleted by name.
+
+Uses DynamoDB for dynamic data. Uses a fork of the 
+nodejs skills kit to provide access to DynamoDB's 
+time to live feature. Dynamic data is deleted if 
+there is no activity for a month.
+*/
+
 var Alexa = require('alexa-sdk');
 var appId = 'amzn1.ask.skill.298e180a-4976-4a90-90d1-6081abaaf089';
-
-
-exports.handler = function(event, context, callback) {
-    var alexa = Alexa.handler(event, context);
-    alexa.appId = appId;
-    alexa.dynamoDBTableName = 'favoritePersonUsers';
-    alexa.registerHandlers(sessionHandlers);
-    alexa.execute();
-};
 
 var globalFavorites = [
     ['me, <say-as interpret-as="interjection">yay,</say-as>', 'empty', 'empty'],
@@ -25,7 +39,7 @@ var globalFavorites = [
     ['Dorothy', 'she', 'off to see the wizard'],
     ['Little Bo Peep', 'she', 'kind to sheep'],
     ['Willy wonka', 'he', 'a chocolate expert'],
-    ['Superman', 'he', 'strong'],
+    ['Superman', 'he', 'very strong'],
     ['Wonderwoman', 'she', 'an Amazon'],
     ['Neo', 'he', 'the one'],
     ['Kermit', 'he', 'cheerful'],
@@ -36,11 +50,11 @@ var globalFavorites = [
     ['Elsa', 'she', 'a good sister']
 ];
 
-var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask favorite person today. You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. You can also ask me to forget an earlier suggestion. You can say, Ask Favorite Person to forget Emily'; 
+var helpMessage = '<break time="2s"/> When you ask I\'ll tell you my favorite person of the day. For example you can say, Tell favorite person today. <break time="2s"/> You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. <break time="2s"/> You can also ask me to forget an earlier suggestion. You can say, Ask Favorite Person to forget Emily'; 
 
 var limitCount = 10;
 
-var limitMessage = 'Sorry, you already have suggested ten favorites. Any more would give me a headache. You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. Here are your current suggestions,';
+var limitMessage = 'Sorry, you already have suggested ten favorites. Any more would give me a headache. <break time="2s"/> You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. <break time="2s"/> Here are your current suggestions,';
 
 var errorMessage = 'Sorry, I didn\'t get that';
 
@@ -123,7 +137,7 @@ var sessionHandlers = {
         this.attributes.getFavoriteCount = 0;
         this.attributes.todaysDate = 0;
         this.attributes.TTL = newTTL();
-        this.emit(':tell', 'Welcome to Favorite Person.' + helpMessage);
+        this.emit(':tell', 'Welcome to Favorite Person. ' + helpMessage);
     },
     'getFavoriteHandler': function() {
         this.attributes.TTL = newTTL();
@@ -150,7 +164,7 @@ var sessionHandlers = {
             var favorite = 'My favorite person today is ' + pick[0];
 
             if (pick[1] != 'empty') {
-                favorite += ' because ' + pick[1] + ' is ' + pick[2];
+                favorite += ', because ' + pick[1] + ' is ' + pick[2];
             }
             this.attributes.todaysFavorite = favorite;
             this.emit(':tell', favorite);
@@ -211,9 +225,15 @@ var sessionHandlers = {
                 var noun = favnoun.value;
                 var adjective = favadj.value;
                 if (nameExists(name, this.attributes.userAddedFavorites) === null) {
-                    this.attributes.userAddedFavorites.push([name, noun, adjective]);
-                    response = addMessage([name, noun, adjective]);
-                    this.emit(':tell', response);
+                    if (noun == 'he' || noun == 'she') {
+                        this.attributes.userAddedFavorites.push([name, noun, adjective]);
+                        response = addMessage([name, noun, adjective]);
+                        this.emit(':tell', response);
+                    }
+                    else {
+                        response = errorMessage + '<break time="2s"/>If you are giving a reason for your suggestion try saying it as, he is, or she is, followed by the reason';
+                        this.emit(':tell', response);
+                    }
                 }
                 else {
                     response = askedMessage(name);
@@ -253,5 +273,13 @@ var sessionHandlers = {
       this.attributes.TTL = newTTL();
       this.emit(':tell', errorMessage);
     }
+};
+
+exports.handler = function(event, context, callback) {
+    var alexa = Alexa.handler(event, context);
+    alexa.appId = appId;
+    alexa.dynamoDBTableName = 'favoritePersonUsers';
+    alexa.registerHandlers(sessionHandlers);
+    alexa.execute();
 };
 
