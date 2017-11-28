@@ -2,80 +2,60 @@
 
 /*
 Lambda function for Favorite Person, a kid's novelty Alexa
-skill. The skill picks a favorite 'person' of the day,
-alternating between a builtin list of film characters
-and a dynamic list entered by users. Within either list
-the selection is random.
+skill. The skill picks a favorite person of the day
+randomly from a dynamic list. The list is initialized
+with a few 'people', like Santa, and users can add 
+new favorites.
 
-The lists contain names and optionally a 'reason' for
+The list contains names and optionally a 'reason' for
 choosing that person as favorite. The reason has to fit the
 sentence pattern:
 
 my favorite today is <name> because <she|he> is <reason>
 
-The lists also include a value for the <she|he> pronoun.
-There is a limit of ten user-generated favorites. The
-user-generated favorites can also be deleted by name.
+The list also includes a value for the <she|he> pronoun.
 
-Uses DynamoDB for dynamic data. Uses a fork of the 
-nodejs skills kit to provide access to DynamoDB's 
-time to live feature. Dynamic data is deleted if 
-there is no activity for a month.
+The list is limited to 20 entries. Entries can also be
+deleted by name.
+
+Uses DynamoDB for dynamic data. Uses a fork of the nodejs 
+skills kit to provide access to DynamoDB's time to live 
+feature. Dynamic data is deleted if there is no activity 
+for a month.
 */
 
 var Alexa = require('alexa-sdk');
 var appId = 'amzn1.ask.skill.298e180a-4976-4a90-90d1-6081abaaf089';
 
-var globalFavorites = [
+var initFavorites = [
     ['me, <say-as interpret-as="interjection">yay,</say-as>', 'empty', 'empty'],
     ['sorry, I\'m not playing favorites today', 'empty', 'empty'],
-    ['Princess Leia', 'she', 'brave'],
-    ['Harry Potter', 'he', 'clever'],
-    ['Bugs Bunny', 'he', 'cool'],
-    ['The Grinch', 'he', 'crabby'],
-    ['Santa Claus', 'he', 'Santa'],
-    ['Mary Poppins', 'she', 'a magical nanny'],
-    ['Frosty The Snowman', 'he', 'never cold'],
-    ['Dorothy', 'she', 'off to see the wizard'],
-    ['Little Bo Peep', 'she', 'kind to sheep'],
-    ['Willy wonka', 'he', 'a chocolate expert'],
-    ['Superman', 'he', 'very strong'],
-    ['Wonderwoman', 'she', 'an Amazon'],
-    ['Neo', 'he', 'the one'],
-    ['Kermit', 'he', 'cheerful'],
-    ['Horton', 'he', 'a good listener'],
-    ['Woody', 'he', 'a leader'],
-    ['The Little Prince', 'he', 'at home on an asteroid'],
-    ['Simba', 'he', 'a king'],
-    ['Elsa', 'she', 'a good sister']
+    ['scrooge', 'he', 'mean but learns to be nice'],
+    ['santa claus', 'he', 'Santa'],
+    ['snowman', 'he', 'never cold'],
+    ['dorothy', 'she', 'off to see the wizard'],
+    ['little bopeep', 'she', 'kind to sheep'],
+    ['gretel', 'she', 'very clever'],
+    ['long john silver', 'he', '<prosody rate="x-slow">arg</prosody>, a pirate']
 ];
 
-var helpMessage = '<break time="2s"/> When you ask I\'ll tell you my favorite person of the day. For example you can say, Tell favorite person today. <break time="2s"/> You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. <break time="2s"/> You can also ask me to forget an earlier suggestion. You can say, Ask Favorite Person to forget Emily'; 
+var helpMessage = '<break time="2s"/> When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask favorite person today. <break time="2s"/> You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. <break time="2s"/> You can also ask me to forget someone. You can say, Ask Favorite Person to forget Emily'; 
 
-var limitCount = 10;
+var limitCount = 20;
 
-var limitMessage = 'Sorry, you already have suggested ten favorites. Any more would give me a headache. <break time="2s"/> You can delete some of your suggestions to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. <break time="2s"/> Here are your current suggestions,';
+var limitMessage = 'Sorry, you already have twenty favorites. Any more would give me a headache. <break time="2s"/> You can ask me to forget some of them to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. <break time="2s"/> Here are all the favorites now,';
 
 var errorMessage = 'Sorry, I didn\'t get that';
 
-var TTL = 3600; // time to live delta in seconds
+var TTL = 3600*24*30; // time to live delta in seconds
+
+var newTTL = function() {
+    return Math.floor(Date.now()/1000) + TTL;
+};
 
 var randomPick = function(favorites) {
     var i = Math.floor(favorites.length * Math.random() );
     return favorites[i];
-};
-
-var nameExists = function(name, userFavorites) {
-    for (var i = 0; i < userFavorites.length; i++) {
-        if (userFavorites[i][0] == name) {
-            return i;
-        }
-    }
-    return null;
-};
-
-var newTTL = function() {
-    return Math.floor(Date.now()/1000) + TTL;
 };
 
 var addMessage = function(favorite) {
@@ -87,8 +67,37 @@ var addMessage = function(favorite) {
     }
 };
 
-var askedMessage = function(name) {
-    return 'Hmmm, I guess you forgot you already asked me to make ' + name + ' my favorite';
+var existsMessage = function(name) {
+    return 'Hmmm, I think ' + name + ' is already one of my favorites';
+};
+
+var removeSpaces = function(string) {
+    return string.split(' ').join('');
+};
+
+var nameExists = function(name, favorites) {
+    // Want the 'forget' intent to work for initial and
+    // any added favorites so matching needs to be modulo
+    // any name ambiguities.
+    // name is from voice input to a First_Name slot and
+    // probably rarely has spaces but some initial favorites
+    // do contain spaces. So include matches to no-spaces
+    // value or to initial substring. Also sometimes name
+    // arrives capitalized so compare lowered values.
+    var lowName = name.toLowerCase();
+    for (var i = 0; i < favorites.length; i++) {
+        var lowFav = favorites[i][0].toLowerCase();
+        if (lowName == lowFav || lowName == removeSpaces(lowFav)) {
+            return i;
+        }
+    }
+    for (i = 0; i < favorites.length; i++) {
+        lowFav = favorites[i][0].toLowerCase();
+        if (lowFav.startsWith(lowName)) {
+            return i;
+        }
+    }
+    return null;
 };
 
 var sessionHandlers = {
@@ -137,6 +146,7 @@ var sessionHandlers = {
         this.attributes.getFavoriteCount = 0;
         this.attributes.todaysDate = 0;
         this.attributes.TTL = newTTL();
+        this.attributes.favorites = initFavorites.slice();
         this.emit(':tell', 'Welcome to Favorite Person. ' + helpMessage);
     },
     'getFavoriteHandler': function() {
@@ -149,25 +159,27 @@ var sessionHandlers = {
             this.emit(':tell', this.attributes.todaysFavorite);
         }
         else {
-            this.attributes.todaysDate = date;
-            this.attributes.timeStamp = Date.now();
-            var pick;
-            if (fcount === 0) {
-                pick = globalFavorites[0];
-            }
-            else if (this.attributes.hasOwnProperty('userAddedFavorites') && this.attributes.userAddedFavorites.length > 0 && fcount % 2 == 1) { 
-                pick = randomPick(this.attributes.userAddedFavorites);
-            }
+            if (this.attributes.favorites.length === 0) {
+                var response = 'Uh oh, I don\'t have any favorites now. Maybe you should suggest some';
+                this.emit(':tell', response);
+            } 
             else {
-                pick = randomPick(globalFavorites);
-            }
-            var favorite = 'My favorite person today is ' + pick[0];
+                this.attributes.todaysDate = date;
+                var pick;
+                if (fcount === 0) {
+                    pick = this.attributes.favorites[0];
+                }
+                else {
+                    pick = randomPick(this.attributes.favorites);
+                }
+                var favorite = 'My favorite person today is ' + pick[0];
 
-            if (pick[1] != 'empty') {
-                favorite += ', because ' + pick[1] + ' is ' + pick[2];
+                if (pick[1] != 'empty') {
+                    favorite += ', because ' + pick[1] + ' is ' + pick[2];
+                }
+                this.attributes.todaysFavorite = favorite;
+                this.emit(':tell', favorite);
             }
-            this.attributes.todaysFavorite = favorite;
-            this.emit(':tell', favorite);
         }
     },
     'addFavoriteHandler': function() {
@@ -175,26 +187,25 @@ var sessionHandlers = {
         var favname = this.event.request.intent.slots.favname;
         if (favname && 'value' in favname) {
         
-            if ( !( this.attributes.hasOwnProperty('userAddedFavorites') )) {
-                this.attributes.userAddedFavorites = [];
-            }
             var response;
-            if (this.attributes.userAddedFavorites.length >= limitCount) {
+            if (this.attributes.favorites.length >= limitCount) {
                 response = limitMessage;
-                for (var i = 0; i < this.attributes.userAddedFavorites.length; i++) {
-                    response += this.attributes.userAddedFavorites[i][0] + ', ';
+                // First two are not simple names, leaving them out of the
+                // spoken list
+                for (var i = 2; i < this.attributes.favorites.length; i++) {
+                    response += this.attributes.favorites[i][0] + ', ';
                 }
                 this.emit(':tell', response);
             }
             else {
                 var name = favname.value;
-                if (nameExists(name, this.attributes.userAddedFavorites) === null) {
-                    this.attributes.userAddedFavorites.push([name, 'empty', 'empty']);
+                if (nameExists(name, this.attributes.favorites) === null) {
+                    this.attributes.favorites.push([name, 'empty', 'empty']);
                     response = addMessage([name, 'empty', 'empty']);
                     this.emit(':tell', response);
                 }
                 else {
-                    response = askedMessage(name);
+                    response = existsMessage(name);
                     this.emit(':tell', response);
                 }
             }
@@ -209,14 +220,11 @@ var sessionHandlers = {
         var favnoun = this.event.request.intent.slots.favnoun;
         var favadj = this.event.request.intent.slots.favadj;
         if (favname && favnoun && favadj && 'value' in favname && 'value' in favnoun && 'value' in favadj) {
-            if ( !(this.attributes.hasOwnProperty('userAddedFavorites') )) {
-                this.attributes.userAddedFavorites = [];
-            }
             var response;
-            if (this.attributes.userAddedFavorites.length >= limitCount) {
+            if (this.attributes.favorites.length >= limitCount) {
                 response = limitMessage;
-                for (var i = 0; i < this.attributes.userAddedFavorites.length; i++) {
-                    response += this.attributes.userAddedFavorites[i][0] + ', ';
+                for (var i = 0; i < this.attributes.favorites.length; i++) {
+                    response += this.attributes.favorites[i][0] + ', ';
                 }
                 this.emit(':tell', response);
             }
@@ -224,19 +232,19 @@ var sessionHandlers = {
                 var name = favname.value;
                 var noun = favnoun.value;
                 var adjective = favadj.value;
-                if (nameExists(name, this.attributes.userAddedFavorites) === null) {
+                if (nameExists(name, this.attributes.favorites) === null) {
                     if (noun == 'he' || noun == 'she') {
-                        this.attributes.userAddedFavorites.push([name, noun, adjective]);
+                        this.attributes.favorites.push([name, noun, adjective]);
                         response = addMessage([name, noun, adjective]);
                         this.emit(':tell', response);
                     }
                     else {
-                        response = errorMessage + '<break time="2s"/>If you are giving a reason for your suggestion try saying it as, he is, or she is, followed by the reason';
+                        response = errorMessage + '<break time="2s"/>If you are giving a reason for your suggestion try saying it as, because he is, or because she is, followed by the reason';
                         this.emit(':tell', response);
                     }
                 }
                 else {
-                    response = askedMessage(name);
+                    response = existsMessage(name);
                     this.emit(':tell', response);
                 }
             }
@@ -250,14 +258,14 @@ var sessionHandlers = {
         var favname = this.event.request.intent.slots.favname;
         if (favname && 'value' in favname) {
             var name = favname.value;
-            var pos = nameExists(name, this.attributes.userAddedFavorites);
+            var pos = nameExists(name, this.attributes.favorites);
             if (pos === null) {
                 response = 'Hmm, I don\'t seem to remember anything about ' + name;
                 this.emit(':tell', response);
             }
             else {
-                this.attributes.userAddedFavorites.splice(pos, 1);
-                response = 'OK, I will forget about ' + name;
+                response = 'OK, I will forget about ' + this.attributes.favorites[pos][0];
+                this.attributes.favorites.splice(pos, 1);
                 this.emit(':tell', response);
             }
         }
