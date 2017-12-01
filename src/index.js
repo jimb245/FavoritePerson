@@ -31,15 +31,18 @@ var initFavorites = [
     ['me, <say-as interpret-as="interjection">yay,</say-as>', 'empty', 'empty'],
     ['sorry, I\'m not playing favorites today', 'empty', 'empty'],
     ['scrooge', 'he', 'mean but learns to be nice'],
-    ['santa claus', 'he', 'Santa'],
-    ['snowman', 'he', 'never cold'],
-    ['dorothy', 'she', 'off to see the wizard'],
-    ['little bopeep', 'she', 'kind to sheep'],
-    ['gretel', 'she', 'very clever'],
-    ['long john silver', 'he', '<prosody rate="x-slow">arg</prosody>, a pirate']
+    ['santa claus', 'he', 'Santa!'],
+    ['snowman', 'he', 'never cold!'],
+    ['rudolf', 'he', 'an important reindeer!']
+    ['dorothy', 'she', 'off to see the wizard!'],
+    ['little bopeep', 'she', 'kind to sheep!'],
+    ['gretel', 'she', 'very clever!'],
+    ['captain hook', 'he', 'a pirate!, <prosody rate="x-slow">arg</prosody>']
 ];
 
-var helpMessage = '<break time="2s"/> When you ask I\'ll tell you my favorite person of the day. For example you can say, Ask favorite person today. <break time="2s"/> You can also suggest other people to be my favorite in the future. For example you can say, Ask Favorite Person to make Emily your favorite because she is smart. <break time="2s"/> You can also ask me to forget someone. You can say, Ask Favorite Person to forget Emily'; 
+var welcomeMessage = '<break time="1s"/> You can ask my favorite person today. <break time="1s"/> You can also suggest someone to be my favorite in the future. <break time="1s"/> You can also ask me to forget someone. <break time="1s"/> Or you can ask for help. <break time="1s"/> What would you like to do?'; 
+
+var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. For example you can say, Who is your favorite person today. <break time="2s"/> You can also suggest other people to be my favorite in the future. For example you can say, Make Emily a favorite because she is smart. <break time="2s"/> You can also ask me to forget someone. You can say, Forget Emily. <break time="2s"/> What would you like to do?'; 
 
 var limitCount = 20;
 
@@ -47,7 +50,8 @@ var limitMessage = 'Sorry, you already have twenty favorites. Any more would giv
 
 var errorMessage = 'Sorry, I didn\'t get that';
 
-var TTL = 3600*24*30; // time to live delta in seconds
+var TTL = 3600; // time to live delta in seconds
+//var TTL = 3600*24*30; // time to live delta in seconds
 
 var newTTL = function() {
     return Math.floor(Date.now()/1000) + TTL;
@@ -85,8 +89,9 @@ var nameExists = function(name, favorites) {
     // value or to initial substring. Also sometimes name
     // arrives capitalized so compare lowered values.
     var lowName = name.toLowerCase();
+    var lowFav;
     for (var i = 0; i < favorites.length; i++) {
-        var lowFav = favorites[i][0].toLowerCase();
+        lowFav = favorites[i][0].toLowerCase();
         if (lowName == lowFav || lowName == removeSpaces(lowFav)) {
             return i;
         }
@@ -102,12 +107,7 @@ var nameExists = function(name, favorites) {
 
 var sessionHandlers = {
     'LaunchRequest': function() {
-        if(Object.keys(this.attributes).length === 0) {
-            this.emit('welcomeHandler');
-        }
-        else {
-            this.emit('getFavoriteHandler');
-        }
+        this.emit('welcomeHandler');
     },
     'GetFavoriteIntent': function() {
         if(Object.keys(this.attributes).length === 0) {
@@ -142,12 +142,14 @@ var sessionHandlers = {
         }
     },
     'welcomeHandler': function() {
-        this.attributes.todaysFavorite = 'dummy';
-        this.attributes.getFavoriteCount = 0;
-        this.attributes.todaysDate = 0;
-        this.attributes.TTL = newTTL();
-        this.attributes.favorites = initFavorites.slice();
-        this.emit(':tell', 'Welcome to Favorite Person. ' + helpMessage);
+        if(Object.keys(this.attributes).length === 0) {
+            this.attributes.todaysFavorite = 'dummy';
+            this.attributes.getFavoriteCount = 0;
+            this.attributes.todaysDate = 0;
+            this.attributes.TTL = newTTL();
+            this.attributes.favorites = initFavorites.slice();
+        }
+        this.emit(':ask', 'Welcome to Favorite Person.' + welcomeMessage, welcomeMessage);
     },
     'getFavoriteHandler': function() {
         this.attributes.TTL = newTTL();
@@ -155,10 +157,12 @@ var sessionHandlers = {
         this.attributes.getFavoriteCount += 1;
 
         var date = (new Date()).getDate();
+        /*
         if (this.attributes.todaysDate == date) {
             this.emit(':tell', this.attributes.todaysFavorite);
         }
         else {
+        */
             if (this.attributes.favorites.length === 0) {
                 var response = 'Uh oh, I don\'t have any favorites now. Maybe you should suggest some';
                 this.emit(':tell', response);
@@ -180,7 +184,7 @@ var sessionHandlers = {
                 this.attributes.todaysFavorite = favorite;
                 this.emit(':tell', favorite);
             }
-        }
+        //}
     },
     'addFavoriteHandler': function() {
         this.attributes.TTL = newTTL();
@@ -275,7 +279,15 @@ var sessionHandlers = {
     },
     "AMAZON.HelpIntent": function() {
         this.attributes.TTL = newTTL();
-        this.emit(':tell', helpMessage);
+        this.emit(':ask', helpMessage);
+    },
+    "AMAZON.StopIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.emit(':tell', 'Goodbye');
+    },
+    "AMAZON.CancelIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.emit(':tell', 'Goodbye');
     },
     'Unhandled': function() {
       this.attributes.TTL = newTTL();
