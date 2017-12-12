@@ -29,11 +29,11 @@ var appId = 'amzn1.ask.skill.298e180a-4976-4a90-90d1-6081abaaf089';
 
 var initFavorites = [
     ['me, <say-as interpret-as="interjection">yay,</say-as>', 'empty', 'empty'],
-    ['sorry, I\'m not playing favorites today', 'empty', 'empty'],
+    ['<break time="2s"/> oh sorry, I can\'t decide today!', 'empty', 'empty'],
     ['scrooge', 'he', 'mean but learns to be nice'],
     ['santa claus', 'he', 'Santa!'],
     ['snowman', 'he', 'never cold!'],
-    ['rudolf', 'he', 'an important reindeer!']
+    ['rudolf', 'he', 'an important reindeer!'],
     ['dorothy', 'she', 'off to see the wizard!'],
     ['little bopeep', 'she', 'kind to sheep!'],
     ['gretel', 'she', 'very clever!'],
@@ -49,6 +49,10 @@ var limitCount = 20;
 var limitMessage = 'Sorry, you already have twenty favorites. Any more would give me a headache. <break time="2s"/> You can ask me to forget some of them to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. <break time="2s"/> Here are all the favorites now,';
 
 var errorMessage = 'Sorry, I didn\'t get that';
+
+var states = {
+    ForgetAskMode: '_ForgetAskMode'
+};
 
 var TTL = 3600; // time to live delta in seconds
 //var TTL = 3600*24*30; // time to live delta in seconds
@@ -105,7 +109,7 @@ var nameExists = function(name, favorites) {
     return null;
 };
 
-var sessionHandlers = {
+var statelessHandlers = {
     'LaunchRequest': function() {
         this.emit('welcomeHandler');
     },
@@ -263,14 +267,32 @@ var sessionHandlers = {
         if (favname && 'value' in favname) {
             var name = favname.value;
             var pos = nameExists(name, this.attributes.favorites);
-            if (pos === null) {
-                response = 'Hmm, I don\'t seem to remember anything about ' + name;
-                this.emit(':tell', response);
-            }
-            else {
+            if (pos !== null) {
                 response = 'OK, I will forget about ' + this.attributes.favorites[pos][0];
                 this.attributes.favorites.splice(pos, 1);
                 this.emit(':tell', response);
+            }
+            else {
+                response = 'Hmm, I don\'t seem to remember anything about ' + name;
+                if (this.attributes.favorites.length > 2) {
+                    response += '. I will ask you about the favorites I do remember.';
+                    this.attributes.forgetIndex = 2; // First two are just jokes - start with the others
+                    response2 = '<break time="1s"/>Would you like me to forget ' + this.attributes.favorites[this.attributes.forgetIndex][0] + '?';
+                    this.handler.state = states.ForgetAskMode;
+                    this.emit(':ask', response + response2, response2);
+                }
+                else if (this.attributes.favorites.length > 0) {
+                    response += '. I will ask you about the favorites I do remember.';
+                    this.attributes.forgetIndex = 0;
+                    response2 = '<break time="1s"/>Would you like me to forget ' + this.attributes.favorites[this.attributes.forgetIndex][0] + '?';
+                    this.handler.state = states.ForgetAskMode;
+                    this.emit(':ask', response + response2, response2);
+                }
+                else {
+                    response += '. Actually I don\'t have any favorites now. Maybe you should suggest some!';
+                    this.handler.state = '';
+                    this.emit(':tell', response);
+                }
             }
         }
         else {
@@ -295,11 +317,56 @@ var sessionHandlers = {
     }
 };
 
+forgetByLookupHandlers = Alexa.CreateStateHandler(states.ForgetAskMode, {
+
+    'forgetAskHandler': function() {
+        this.attributes.TTL = newTTL();
+        var response = 'Would you like me to forget ' + this.attributes.favorites[this.attributes.forgetIndex][0] + '?';
+        this.emit(':ask', response, response);
+    },
+    'AMAZON.YesIntent': function() {
+        this.attributes.TTL = newTTL();
+        var pos = this.attributes.forgetIndex;
+        response = 'OK, I will forget about ' + this.attributes.favorites[pos][0];
+        this.attributes.favorites.splice(pos, 1);
+        this.handler.state = '';
+        this.emit(':tell', response);
+
+    },
+    'AMAZON.NoIntent': function() {
+        this.attributes.TTL = newTTL();
+        this.attributes.forgetIndex += 1;
+        if (this.attributes.forgetIndex >= this.attributes.favorites.length) {
+            this.handler.state = '';
+            this.emit(':tell', 'Well, that was all of my favorites!');
+        }
+        else {
+            this.emitWithState('forgetAskHandler');
+        }
+    },
+    "AMAZON.StopIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    "AMAZON.CancelIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    'Unhandled': function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', errorMessage);
+    }
+});
+
+
 exports.handler = function(event, context, callback) {
     var alexa = Alexa.handler(event, context);
     alexa.appId = appId;
     alexa.dynamoDBTableName = 'favoritePersonUsers';
-    alexa.registerHandlers(sessionHandlers);
+    alexa.registerHandlers(statelessHandlers, forgetByLookupHandlers);
     alexa.execute();
 };
 
