@@ -9,6 +9,17 @@
             {"name": "favnoun", "type": "List_Of_Pronouns"},
             {"name": "favadj", "type": "List_Of_Adjectives"}
             ]},
+    {"intent": "FirstNameIntent", 
+        "slots": [
+            {"name": "favname", "type": "AMAZON.US_FIRST_NAME"}]},
+    {"intent": "LastNameIntent", 
+        "slots": [
+            {"name": "favname", "type": "AMAZON.US_FIRST_NAME"}]},
+    {"intent": "BecauseIntent", 
+        "slots": [
+            {"name": "favnoun", "type": "List_Of_Pronouns"},
+            {"name": "favadj", "type": "List_Of_Adjectives"}]},
+    {"intent": "BecauseNoneIntent"}, 
     {"intent": "ForgetFavoriteIntent", 
         "slots": [
             {"name": "favname", "type": "AMAZON.US_FIRST_NAME"}]},

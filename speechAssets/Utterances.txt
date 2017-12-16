@@ -71,6 +71,10 @@ AddFavoriteBecauseIntent change your favorite to {favname} because {favnoun} is 
 AddFavoriteBecauseIntent change favorite to {favname} because {favnoun} is {favadj}
 AddFavoriteBecauseIntent set your favorite to {favname} because {favnoun} is {favadj}
 AddFavoriteBecauseIntent set favorite to {favname} because {favnoun} is {favadj}
+FirstNameIntent first name {favname}
+LastNameIntent last name {favname}
+BecauseNoneIntent because none
+BecauseIntent because {favnoun} is {favadj}
 ForgetFavoriteIntent forget favorite person {favname}
 ForgetFavoriteIntent delete favorite person {favname}
 ForgetFavoriteIntent remove favorite person {favname}

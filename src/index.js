@@ -5,7 +5,7 @@ Lambda function for Favorite Person, a kid's novelty Alexa
 skill. The skill picks a favorite person of the day
 randomly from a dynamic list. The list is initialized
 with a few 'people', like Santa, and users can add 
-new favorites.
+new favorites or remove old ones.
 
 The list contains names and optionally a 'reason' for
 choosing that person as favorite. The reason has to fit the
@@ -15,13 +15,13 @@ my favorite today is <name> because <she|he> is <reason>
 
 The list also includes a value for the <she|he> pronoun.
 
-The list is limited to 20 entries. Entries can also be
-deleted by name.
+The list is limited to 20 entries.
 
 Uses DynamoDB for dynamic data. Uses a fork of the nodejs 
 skills kit to provide access to DynamoDB's time to live 
 feature. Dynamic data is deleted if there is no activity 
-for a month.
+for a month. The fork also has a change that deletes the
+state attribute from storage if its value is falsey.
 */
 
 var Alexa = require('alexa-sdk');
@@ -46,12 +46,15 @@ var helpMessage = 'When you ask I\'ll tell you my favorite person of the day. Fo
 
 var limitCount = 20;
 
-var limitMessage = 'Sorry, you already have twenty favorites. Any more would give me a headache. <break time="2s"/> You can ask me to forget some of them to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. <break time="2s"/> Here are all the favorites now,';
+var limitMessage = 'Sorry, I already have a lot of favorites to consider. Any more would give me a headache. <break time="2s"/> You can ask me to forget some of them to make room for new ones. For example, you can say, Ask Favorite Person to forget Emily. <break time="2s"/> Here are all the favorites now,';
 
 var errorMessage = 'Sorry, I didn\'t get that';
 
 var states = {
-    ForgetAskMode: '_ForgetAskMode'
+    ForgetAskMode: '_ForgetAskMode',
+    FirstNameAskMode: '_FirstNameAskMode',
+    LastNameAskMode: '_LastNameAskMode',
+    BecauseAskMode: '_BecauseAskMode'
 };
 
 var TTL = 3600; // time to live delta in seconds
@@ -84,14 +87,9 @@ var removeSpaces = function(string) {
 };
 
 var nameExists = function(name, favorites) {
-    // Want the 'forget' intent to work for initial and
-    // any added favorites so matching needs to be modulo
-    // any name ambiguities.
-    // name is from voice input to a First_Name slot and
-    // probably rarely has spaces but some initial favorites
-    // do contain spaces. So include matches to no-spaces
-    // value or to initial substring. Also sometimes name
-    // arrives capitalized so compare lowered values.
+    // To handle name ambiguities, this does matching
+    // modulo case, embedded spaces, and trailing
+    // substring.
     var lowName = name.toLowerCase();
     var lowFav;
     for (var i = 0; i < favorites.length; i++) {
@@ -192,20 +190,20 @@ var statelessHandlers = {
     },
     'addFavoriteHandler': function() {
         this.attributes.TTL = newTTL();
-        var favname = this.event.request.intent.slots.favname;
-        if (favname && 'value' in favname) {
-        
-            var response;
-            if (this.attributes.favorites.length >= limitCount) {
-                response = limitMessage;
-                // First two are not simple names, leaving them out of the
-                // spoken list
-                for (var i = 2; i < this.attributes.favorites.length; i++) {
-                    response += this.attributes.favorites[i][0] + ', ';
-                }
-                this.emit(':tell', response);
+        var response;
+        if (this.attributes.favorites.length >= limitCount) {
+            response = limitMessage;
+            // First two are not simple names, leaving them out of the
+            // response list. However it is possible to delete them by 
+            // using just the first word with forget intent.
+            for (var i = 2; i < this.attributes.favorites.length; i++) {
+                response += this.attributes.favorites[i][0] + ', ';
             }
-            else {
+            this.emit(':tell', response);
+        }
+        else {
+            var favname = this.event.request.intent.slots.favname;
+            if (favname && 'value' in favname) {
                 var name = favname.value;
                 if (nameExists(name, this.attributes.favorites) === null) {
                     this.attributes.favorites.push([name, 'empty', 'empty']);
@@ -217,9 +215,15 @@ var statelessHandlers = {
                     this.emit(':tell', response);
                 }
             }
-        }
-        else {
-            this.emit(':tell', errorMessage);
+            else {
+                // No valid slot so switch to ask mode
+                this.handler.state = states.FirstNameAskMode;
+                this.attributes.firstName = '';
+                this.attributes.lastName = '';
+                this.attributes.fullName = '';
+                response = 'To begin, tell me the favorite\'s first name. For example you can say, first name sam';
+                this.emit(':ask', 'OK, I will ask you about the new favorite. ' + response, response);
+            }
         }
     },
     'addFavoriteBecauseHandler': function() {
@@ -247,7 +251,7 @@ var statelessHandlers = {
                         this.emit(':tell', response);
                     }
                     else {
-                        response = errorMessage + '<break time="2s"/>If you are giving a reason for your suggestion try saying it as, because he is, or because she is, followed by the reason';
+                        response = errorMessage + '<break time="1s"/>If you are giving a reason for your suggestion try saying it as, because he is, or because she is, followed by a description or characteristic';
                         this.emit(':tell', response);
                     }
                 }
@@ -317,6 +321,141 @@ var statelessHandlers = {
     }
 };
 
+firstNameAskHandlers = Alexa.CreateStateHandler(states.FirstNameAskMode, {
+
+    'FirstNameIntent': function() {
+        this.attributes.TTL = newTTL();
+        var favname = this.event.request.intent.slots.favname;
+        if (favname && 'value' in favname) {
+            this.attributes.firstName = favname.value;
+            this.handler.state = states.LastNameAskMode;
+            var response = 'Now tell me the favorite\'s last name. For example you can say, last name smith, or last name none, if there is no last name';
+            this.emit(':ask', response, response);
+        }
+        else {
+            this.handler.state = '';
+            this.emit(':tell', errorMessage);
+        }
+    },
+    "AMAZON.StopIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    "AMAZON.CancelIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    'Unhandled': function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', errorMessage);
+    }
+});
+
+lastNameAskHandlers = Alexa.CreateStateHandler(states.LastNameAskMode, {
+
+    'LastNameIntent': function() {
+        this.attributes.TTL = newTTL();
+        var favname = this.event.request.intent.slots.favname;
+        var response;
+        if (favname && 'value' in favname) {
+            this.attributes.lastName = favname.value;
+            var name = this.attributes.firstName;
+            if (this.attributes.lastName != 'none') {
+                name += ' ' + this.attributes.lastName;
+            }
+            this.attributes.fullName = name;
+            if (nameExists(name, this.attributes.favorites) !== null) {
+                response = existsMessage(name);
+                this.emit(':tell', response);
+            }
+            else {
+                this.handler.state = states.BecauseAskMode;
+                response = 'Now tell me why you want this favorite. For example you can say, because he is funny, or you can say, because none, to skip this part.';
+                this.emit(':ask', response, response);
+            }
+        }
+        else {
+            this.handler.state = '';
+            this.emit(':tell', errorMessage);
+        }
+    },
+    "AMAZON.StopIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    "AMAZON.CancelIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    'Unhandled': function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', errorMessage);
+    }
+});
+
+becauseAskHandlers = Alexa.CreateStateHandler(states.BecauseAskMode, {
+
+    'BecauseIntent': function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        var response;
+        var entry;
+        var favnoun = this.event.request.intent.slots.favnoun;
+        var favadj = this.event.request.intent.slots.favadj;
+        if (favnoun && 'value' in favnoun) {
+            var noun = favnoun.value;
+            if (noun === 'none') {
+                entry = [this.attributes.fullName, 'empty', 'empty'];
+                this.attributes.favorites.push(entry);
+                response = addMessage(entry);
+                this.emit(':tell', response);
+            }
+            else if (noun != 'he' && noun != 'she') {
+                response = errorMessage + '<break time="1s"/>You need to say it as, because he is, or because she is, followed by a description or characteristic.';
+                this.emit(':tell', response);
+            }
+            else if (!favadj || !('value' in favadj)) {
+                this.emit(':tell', errorMessage);
+            }
+            else {
+                entry = [this.attributes.fullName, noun, favadj.value];
+                this.attributes.favorites.push(entry);
+                response = addMessage(entry);
+                this.emit(':tell', response);
+            }
+        }
+    },
+    'BecauseNoneIntent': function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        var entry = [this.attributes.fullName, 'empty', 'empty'];
+        this.attributes.favorites.push(entry);
+        response = addMessage(entry);
+        this.emit(':tell', response);
+    },
+    "AMAZON.StopIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    "AMAZON.CancelIntent": function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', "Goodbye!");  
+    },
+    'Unhandled': function() {
+        this.attributes.TTL = newTTL();
+        this.handler.state = '';
+        this.emit(':tell', errorMessage);
+    }
+});
+
 forgetByLookupHandlers = Alexa.CreateStateHandler(states.ForgetAskMode, {
 
     'forgetAskHandler': function() {
@@ -366,7 +505,7 @@ exports.handler = function(event, context, callback) {
     var alexa = Alexa.handler(event, context);
     alexa.appId = appId;
     alexa.dynamoDBTableName = 'favoritePersonUsers';
-    alexa.registerHandlers(statelessHandlers, forgetByLookupHandlers);
+    alexa.registerHandlers(statelessHandlers, firstNameAskHandlers, lastNameAskHandlers, becauseAskHandlers, forgetByLookupHandlers);
     alexa.execute();
 };
 
